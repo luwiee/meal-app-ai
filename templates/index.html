@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Meal Plan Assistant</title>
+    <style>
+      :root {
+        --bg: #111;
+        --fg: #fff;
+        --accent: #00bfff;
+        --card-bg: #181818;
+        --border: #222;
+        --radius: 18px;
+        --shadow: 0 8px 32px rgba(0,0,0,0.25);
+        --font-main: 'Inter', 'Segoe UI', Arial, sans-serif;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: var(--font-main);
+        background: var(--bg);
+        color: var(--fg);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .chat-container {
+        width: 95%;
+        max-width: 700px;
+        min-height: 80vh;
+        background: var(--card-bg);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1.5px solid var(--border);
+      }
+      .chat-header {
+        background: transparent;
+        color: var(--fg);
+        padding: 2.5rem 2rem 1.5rem 2rem;
+        text-align: center;
+        border-bottom: 1.5px solid var(--border);
+      }
+      .chat-header h1 {
+        font-size: 2.2rem;
+        font-weight: 800;
+        letter-spacing: -1px;
+        margin-bottom: 0.5rem;
+        color: var(--accent);
+        text-shadow: 0 2px 12px rgba(0,191,255,0.12);
+      }
+      .chat-header p {
+        font-size: 1.1rem;
+        color: #bbb;
+        font-weight: 400;
+      }
+      .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 2rem;
+        background: transparent;
+        scrollbar-width: thin;
+        scrollbar-color: var(--accent) var(--card-bg);
+      }
+      .chat-messages::-webkit-scrollbar {
+        width: 8px;
+      }
+      .chat-messages::-webkit-scrollbar-thumb {
+        background: var(--accent);
+        border-radius: 8px;
+      }
+      .message {
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: flex-start;
+      }
+      .message.user {
+        justify-content: flex-end;
+      }
+      .message.assistant {
+        justify-content: flex-start;
+      }
+      .message-content {
+        max-width: 70%;
+        padding: 1.1rem 1.4rem;
+        border-radius: var(--radius);
+        word-wrap: break-word;
+        font-size: 1.08rem;
+        line-height: 1.6;
+        box-shadow: 0 2px 12px rgba(0,191,255,0.04);
+        transition: background 0.2s, color 0.2s;
+      }
+      .message.user .message-content {
+        background: var(--accent);
+        color: #111;
+        border-bottom-right-radius: 6px;
+        font-weight: 600;
+      }
+      .message.assistant .message-content {
+        background: #181818;
+        color: var(--fg);
+        border: 1.5px solid var(--border);
+        border-bottom-left-radius: 6px;
+      }
+      .questions-list, .structured-data, .meal-plan, .rejected-info {
+        background: #151d22;
+        border: 1.5px solid var(--accent);
+        border-radius: var(--radius);
+        padding: 1.1rem 1.3rem;
+        margin: 1.1rem 0;
+        color: var(--fg);
+        box-shadow: 0 2px 12px rgba(0,191,255,0.06);
+      }
+      .questions-list h4, .rejected-info h4, .meal-plan h4, .structured-data h4 {
+        color: var(--accent);
+        margin-bottom: 0.7rem;
+        font-size: 1.1rem;
+        font-weight: 700;
+      }
+      .questions-list ul {
+        list-style: none;
+        padding: 0;
+      }
+      .questions-list li {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #222;
+        color: #e0e0e0;
+      }
+      .questions-list li:last-child {
+        border-bottom: none;
+      }
+      .structured-data pre {
+        background: #181818;
+        padding: 0.7rem;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 0.98rem;
+        color: #b2eaff;
+      }
+      .meal-plan h4 {
+        color: var(--accent);
+        margin-bottom: 1rem;
+      }
+      .meal-item {
+        margin-bottom: 1.1rem;
+        padding: 0.8rem 1rem;
+        background: #181818;
+        border-radius: 10px;
+        border-left: 4px solid var(--accent);
+        color: var(--fg);
+        box-shadow: 0 1px 6px rgba(0,191,255,0.04);
+      }
+      .meal-item h5 {
+        color: var(--accent);
+        margin-bottom: 0.3rem;
+        font-size: 1.05rem;
+      }
+      .rejected-item {
+        margin-bottom: 0.7rem;
+        padding: 0.6rem 0.9rem;
+        background: #1a1a1a;
+        border-radius: 7px;
+        border-left: 4px solid #ffb300;
+        color: #ffeaa7;
+      }
+      .rejected-item strong {
+        color: #ffb300;
+      }
+      .rejected-item .reason {
+        font-style: italic;
+        color: #ffeaa7;
+        margin-top: 0.3rem;
+      }
+      .chat-input {
+        display: flex;
+        padding: 1.5rem 2rem;
+        background: #181818;
+        border-top: 1.5px solid var(--border);
+      }
+      .chat-input input {
+        flex: 1;
+        padding: 1rem 1.2rem;
+        border: 1.5px solid #222;
+        border-radius: 30px;
+        font-size: 1.1rem;
+        background: #111;
+        color: var(--fg);
+        outline: none;
+        transition: border-color 0.3s, box-shadow 0.3s;
+      }
+      .chat-input input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(0,191,255,0.15);
+      }
+      .chat-input button {
+        background: var(--accent);
+        color: #111;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 30px;
+        margin-left: 1rem;
+        cursor: pointer;
+        font-size: 1.1rem;
+        font-weight: 700;
+        transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+        box-shadow: 0 2px 8px rgba(0,191,255,0.10);
+      }
+      .chat-input button:hover:not(:disabled) {
+        background: #0099cc;
+        color: #fff;
+      }
+      .chat-input button:disabled {
+        background: #333;
+        color: #888;
+        cursor: not-allowed;
+      }
+      .reset-btn {
+        background: transparent;
+        color: var(--accent);
+        border: 1.5px solid var(--accent);
+        padding: 0.7rem 1.5rem;
+        border-radius: 30px;
+        cursor: pointer;
+        font-size: 1rem;
+        margin-top: 0.7rem;
+        font-weight: 700;
+        transition: background 0.2s, color 0.2s;
+      }
+      .reset-btn:hover {
+        background: var(--accent);
+        color: #111;
+      }
+      .loading {
+        display: none;
+        text-align: center;
+        padding: 1.5rem;
+        color: #bbb;
+        font-size: 1.1rem;
+      }
+      .loading.active {
+        display: block;
+      }
+      .error {
+        background: #2a0000;
+        color: #ffb3b3;
+        border: 1.5px solid #ff4d4d;
+        border-radius: var(--radius);
+        padding: 1.1rem 1.3rem;
+        margin: 1.1rem 0;
+        font-weight: 600;
+      }
+      @media (max-width: 768px) {
+        .chat-container {
+          width: 99%;
+          min-height: 90vh;
+        }
+        .chat-header {
+          padding: 1.5rem 0.7rem 1rem 0.7rem;
+        }
+        .chat-messages {
+          padding: 1rem;
+        }
+        .message-content {
+          max-width: 95%;
+          font-size: 1rem;
+        }
+        .chat-input {
+          padding: 1rem 0.7rem;
+        }
+      }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🍽️ AI Meal Plan Assistant</h1>
+            <p>Share your dietary needs and preferences, and I'll create a personalized meal plan for you!</p>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="message assistant">
+                <div class="message-content">
+                    <p>Hello! I'm your AI Meal Plan Assistant. Please share your dietary needs, health conditions, preferences, and any other relevant information about your eating habits. I'll ask a few follow-up questions to create the perfect meal plan for you.</p>
+                    <p><strong>Example:</strong> "I'm a 32-year-old graphic designer training for my first marathon. I'm lactose intolerant, love spicy food, and want quick, high-protein meals that fit a busy schedule. I also travel a lot for work."</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">
+            <p>🤖 Analyzing your information and creating your meal plan...</p>
+        </div>
+        
+        <div class="chat-input">
+            <input type="text" id="userInput" placeholder="Tell me about your dietary needs and preferences..." disabled>
+            <button id="sendBtn" onclick="sendMessage()" disabled>Send</button>
+        </div>
+        
+        <div style="text-align: center; padding: 10px;">
+            <button class="reset-btn" onclick="resetConversation()">Start Over</button>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const loading = document.getElementById('loading');
+
+        // Enable input after page load
+        document.addEventListener('DOMContentLoaded', function() {
+            userInput.disabled = false;
+            sendBtn.disabled = false;
+        });
+
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            messageContent.innerHTML = content;
+            
+            messageDiv.appendChild(messageContent);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function formatStructuredData(data) {
+            return `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+
+        function formatMealPlan(mealPlan) {
+            return `
+                <div class="meal-item">
+                    <h5>🌅 Breakfast</h5>
+                    <p>${mealPlan.breakfast}</p>
+                </div>
+                <div class="meal-item">
+                    <h5>🌞 Lunch</h5>
+                    <p>${mealPlan.lunch}</p>
+                </div>
+                <div class="meal-item">
+                    <h5>🌙 Dinner</h5>
+                    <p>${mealPlan.dinner}</p>
+                </div>
+                <div class="meal-item">
+                    <h5>💡 Key Decisions</h5>
+                    <p>${mealPlan.key_decisions}</p>
+                </div>
+            `;
+        }
+
+        function formatRejectedInfo(rejectedInfo) {
+            if (!rejectedInfo || !rejectedInfo.rejected_items || rejectedInfo.rejected_items.length === 0) {
+                return '';
+            }
+            
+            let rejectedHtml = '<div class="rejected-info"><h4>⚠️ Rejected or Ignored Information:</h4>';
+            
+            for (let i = 0; i < rejectedInfo.rejected_items.length; i++) {
+                const item = rejectedInfo.rejected_items[i];
+                const reason = rejectedInfo.reasons[i] || 'No specific reason provided';
+                
+                rejectedHtml += `
+                    <div class="rejected-item">
+                        <strong>Rejected:</strong> ${item}
+                        <div class="reason"><strong>Reason:</strong> ${reason}</div>
+                    </div>
+                `;
+            }
+            
+            rejectedHtml += '</div>';
+            return rejectedHtml;
+        }
+
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, true);
+            userInput.value = '';
+            
+            // Show loading
+            loading.classList.add('active');
+            sendBtn.disabled = true;
+            userInput.disabled = true;
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                const data = await response.json();
+
+                if (data.type === 'follow_up_questions') {
+                    const questionsHtml = `
+                        <p>${data.message}</p>
+                        <div class="questions-list">
+                            <h4>Follow-up Questions:</h4>
+                            <ul>
+                                ${data.questions.map(q => `<li>• ${q}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <p>Please answer these questions one by one in your next messages.</p>
+                    `;
+                    addMessage(questionsHtml);
+                } else if (data.type === 'single_question') {
+                    addMessage(data.message);
+                } else if (data.type === 'collecting_info') {
+                    addMessage(data.message);
+                } else if (data.type === 'meal_plan') {
+                    let responseHtml = `<p>${data.message}</p>`;
+                    
+                    if (data.structured_data) {
+                        responseHtml += `
+                            <div class="structured-data">
+                                <h4>📊 Structured Data Extracted:</h4>
+                                ${formatStructuredData(data.structured_data)}
+                            </div>
+                        `;
+                    }
+                    
+                    if (data.meal_plan) {
+                        responseHtml += `
+                            <div class="meal-plan">
+                                <h4>🍽️ Your Personalized Daily Meal Plan:</h4>
+                                ${formatMealPlan(data.meal_plan)}
+                            </div>
+                        `;
+                    }
+                    
+                    if (data.rejected_info) {
+                        responseHtml += formatRejectedInfo(data.rejected_info);
+                    }
+                    
+                    addMessage(responseHtml);
+                } else if (data.type === 'error') {
+                    addMessage(`<div class="error">❌ ${data.message}</div>`);
+                } else {
+                    addMessage(data.message);
+                }
+
+            } catch (error) {
+                addMessage(`<div class="error">❌ Sorry, I encountered an error: ${error.message}</div>`);
+            } finally {
+                loading.classList.remove('active');
+                sendBtn.disabled = false;
+                userInput.disabled = false;
+                userInput.focus();
+            }
+        }
+
+        async function resetConversation() {
+            try {
+                await fetch('/reset', { method: 'POST' });
+                chatMessages.innerHTML = `
+                    <div class="message assistant">
+                        <div class="message-content">
+                            <p>Hello! I'm your AI Meal Plan Assistant. Please share your dietary needs, health conditions, preferences, and any other relevant information about your eating habits. I'll ask a few follow-up questions to create the perfect meal plan for you.</p>
+                            <p><strong>Example:</strong> "I'm a 32-year-old graphic designer training for my first marathon. I'm lactose intolerant, love spicy food, and want quick, high-protein meals that fit a busy schedule. I also travel a lot for work."</p>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                addMessage(`<div class="error">❌ Error resetting conversation: ${error.message}</div>`);
+            }
+        }
+
+        // Allow Enter key to send message
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !sendBtn.disabled) {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
